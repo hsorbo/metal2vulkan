@@ -516,10 +516,17 @@ fn by_identity(desc: &DeviceDescription) -> Vec<DriverWorkaround> {
         }
         // A uniform buffer's reads at different addresses, and a register allocator that faults
         // compiling a module past a word bound, on every GPU it drives.
-        Some(vk::DriverId::INTEL_OPEN_SOURCE_MESA) => vec![
-            DriverWorkaround::UniformReadsOutpaceStorageReads,
-            DriverWorkaround::RegisterAllocatorOverflowsLargeModules,
-        ],
+        // On the UHD Graphics 630, a 16-bit fused multiply-add's upper lanes in a subgroup of 32.
+        Some(vk::DriverId::INTEL_OPEN_SOURCE_MESA) => {
+            let mut found = vec![
+                DriverWorkaround::UniformReadsOutpaceStorageReads,
+                DriverWorkaround::RegisterAllocatorOverflowsLargeModules,
+            ];
+            if super::INTEL_UHD_630.contains(&desc.device_id) {
+                found.push(DriverWorkaround::WideHalfFmaUpperLanesWrong);
+            }
+            found
+        }
         _ => Vec::new(),
     }
 }

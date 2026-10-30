@@ -1177,6 +1177,44 @@ fn only_nvidia_on_ampere_ga10x_carries_the_narrow_mask_defect() {
     assert!(!carries(&desc));
 }
 
+/// `DriverWorkaround::WideHalfFmaUpperLanesWrong` is keyed on ANV on the UHD Graphics 630 and on
+/// nothing else: no committed profile describes that GPU, so none carries it. An Intel profile's
+/// description under 0x3e92 carries it, and its `half` fused multiply-add then takes the `float`
+/// routes (`Route::Native` under native device maths, else `Route::HalfOdd`) where it took
+/// `Route::F16Khr`; under its own ID, or under another driver, it does not.
+#[test]
+fn only_anv_on_the_uhd_630_carries_the_wide_half_fma_defect() {
+    use crate::device::profile::DriverWorkaround;
+    use crate::lower::arith::fma::{half_route, Route};
+    let defect = DriverWorkaround::WideHalfFmaUpperLanesWrong;
+    let profile_of = |desc: &DeviceDescription| {
+        Device::new(desc.clone(), DevicePolicy::default())
+            .unwrap()
+            .profile()
+            .clone()
+    };
+    for (stem, text) in committed_profiles() {
+        let desc = DeviceDescription::from_khronos_json(&text, None).unwrap();
+        assert!(
+            !profile_of(&desc).fields().workarounds.contains(&defect),
+            "{stem}"
+        );
+    }
+    let mut desc = profile("intel-uhd770-rpls-anv");
+    assert_eq!(desc.driver_id, Some(vk::DriverId::INTEL_OPEN_SOURCE_MESA));
+    assert!(!crate::device::INTEL_UHD_630.contains(&desc.device_id));
+    let own = half_route(&profile_of(&desc));
+    desc.device_id = 0x3e92;
+    let p = profile_of(&desc);
+    assert!(p.fields().workarounds.contains(&defect));
+    assert_ne!(half_route(&p), Route::F16Khr);
+    if own == Route::F16Khr {
+        assert!(matches!(half_route(&p), Route::Native | Route::HalfOdd));
+    }
+    desc.driver_id = Some(vk::DriverId::MESA_LLVMPIPE);
+    assert!(!profile_of(&desc).fields().workarounds.contains(&defect));
+}
+
 /// `DriverWorkaround::HalfConversionPairFolded` is keyed on NVIDIA's driver whatever its GPU and on
 /// nothing else: every committed NVIDIA profile carries it (the RTX 3090's generation and the RTX
 /// 50 series alike) and no other committed profile does; the RTX 5080 laptop GPU's description

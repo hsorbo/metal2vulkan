@@ -88,7 +88,7 @@ pub use subgroup::{SimdClass, StageSubgroup, SubgroupModel, SubgroupSizes, Tier}
 // The driver defect a refusal names (`Needs::DriverDefect`).
 pub use profile::DriverWorkaround;
 // The GPU generation a driver workaround and a runtime driver defect key on.
-pub use gpus::NVIDIA_AMPERE_GA10X;
+pub use gpus::{INTEL_UHD_630, NVIDIA_AMPERE_GA10X};
 pub use requirements::{
     ApiVersion, FloatControl, FloatWidth, FormatUsage, Requirements, ResolveMode, SpirvCapability,
     SpirvExtension, StageCreateFlag, SubgroupOp, VkExtension, VkFeature, VkLimit, VkProperty,

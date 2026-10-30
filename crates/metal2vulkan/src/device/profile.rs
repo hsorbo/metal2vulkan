@@ -1337,6 +1337,22 @@ pub enum DriverWorkaround {
     /// emitted as `OpBitFieldUExtract(x, 0, N)` there (`lower::arith::ops::mask`), which is the
     /// same bits on every device.
     NarrowMaskAfterSignedClamp,
+    /// The driver's compiler emits a 16-bit `OpFmaKHR` in a kernel that runs 32 lanes to a
+    /// subgroup as one 32-channel `mad` (Align16, `:hf`), where it splits every other 16-bit
+    /// instruction of the kernel into two 16-channel halves; where only some of the second half's
+    /// channels are enabled, those channels' results come out wrong. Measured on the UHD Graphics
+    /// 630 (`deviceID` 0x3e92, Coffee Lake GT2) under ANV (`VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA`,
+    /// `driverVersion` 0x6802005), by Core Animation's `variable_blur_downsample_compute_agx2`
+    /// and an MSL port of it in limbo's guest: in a threadgroup of 16 x 16 partly past the
+    /// texture's edge, where only `x < 8` stores, the stores of rows 1, 3, 5, ... (lanes 16 to 23
+    /// of each subgroup) came out wrong. The same kernel with the `half` `a * w1 + b * w2` in
+    /// `float`, with the products summed unweighted, or run 16 lanes to a subgroup, answered right.
+    /// Derived for ANV on that GPU ([`INTEL_UHD_630`](crate::device::INTEL_UHD_630)): a `half`
+    /// fused multiply-add there takes the route of a profile without `shaderFmaFloat16`
+    /// (`lower::arith::fma::half_route`): the device's `float` `Fma` rounded to `half` under
+    /// native device maths, else `Route::HalfOdd` (`float` `Fma` rounded to odd, then to `half`,
+    /// the same answer as `Route::F16Khr`).
+    WideHalfFmaUpperLanesWrong,
     /// The driver's compiler folds a `half` round trip, an `OpFConvert` from 32- to 16-bit floats
     /// and its widening back, each decorated `NoContraction`, into the 32-bit value it started
     /// from, in an entry declaring `RoundingModeRTE`, `DenormPreserve` and

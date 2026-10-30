@@ -21,6 +21,11 @@ pub const NVIDIA_AMPERE_GA10X: &[u32] = &[
     0x25e5, 0x25ec, 0x25ed, 0x25f9, 0x25fa, 0x25fb,
 ];
 
+/// The `deviceID` of Intel's UHD Graphics 630 (Coffee Lake GT2, Gen 9.5), the one GPU of its
+/// generation measured with `DriverWorkaround::WideHalfFmaUpperLanesWrong`; another Gen 9 GPU takes
+/// it once measured.
+pub const INTEL_UHD_630: &[u32] = &[0x3e92];
+
 /// Each measured GPU that reports more than one `deviceID`, as its `vendorID` and its IDs, the one
 /// it was measured under first. A table keyed on a measured GPU names it by that first ID, and a
 /// device that reports any of them takes its rows at the releases they name: the driver facts,

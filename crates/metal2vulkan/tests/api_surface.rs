@@ -253,6 +253,7 @@ surface! {
         enum DriverWorkaround N;
         enum DriverFact N;
         struct DriverDiagnostic N;
+        const INTEL_UHD_630;
         const NVIDIA_AMPERE_GA10X;
         enum GuestIsolation N;
         enum HandleDomain N;

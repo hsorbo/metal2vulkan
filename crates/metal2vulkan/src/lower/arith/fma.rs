@@ -183,12 +183,18 @@ pub fn tiny_route(p: &DeviceProfile) -> Option<Route> {
 /// 16-bit `Fma` as Metal's own `half` `fma` (`DriverDeviation::MetalHalfFma`) and `shaderFloat16`
 /// is enabled, else [`Route::F16Khr`] where `shaderFmaFloat16` is and the profile rounds to `half`
 /// under the 16-bit float controls (which need `shaderFloat16`), under either policy since it is
-/// Metal's, else the device's `float` `Fma` rounded to `half` under native device maths, else
-/// [`Route::HalfOdd`].
+/// Metal's, but on a driver whose 16-bit `OpFmaKHR` is measured wrong in a subgroup of 32
+/// (`DriverWorkaround::WideHalfFmaUpperLanesWrong`), else the device's `float` `Fma` rounded to
+/// `half` under native device maths, else [`Route::HalfOdd`].
 pub fn half_route(p: &DeviceProfile) -> Route {
     if p.takes_driver_deviation(DriverDeviation::MetalHalfFma) && p.fields().leaf.float16 {
         Route::F16
-    } else if p.fields().leaf.fma16 && narrow::quantize_form(p) == QuantizeForm::Controlled {
+    } else if p.fields().leaf.fma16
+        && narrow::quantize_form(p) == QuantizeForm::Controlled
+        && !p
+            .workarounds()
+            .contains(&crate::device::DriverWorkaround::WideHalfFmaUpperLanesWrong)
+    {
         Route::F16Khr
     } else if p.fields().float_functions == FloatFunctions::Native {
         Route::Native
