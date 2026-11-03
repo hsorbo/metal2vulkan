@@ -199,6 +199,12 @@ pub struct DeviceOptions {
     /// diagnostic, for running a measured device as an unmeasured one of its driver runs (a
     /// report from a GPU no venue measured). No Metal counterpart.
     pub assume_unmeasured_identity: bool,
+    /// Answer facts of a device's driver that the consumer measured on its device and vouches
+    /// for ([`DeviceDescription::vouched_facts`](metal2vulkan::device::DeviceDescription)): on an
+    /// identity no measurement names, each one the driver is measured to give on another GPU or
+    /// release is taken as if measured there, the rest are ignored. Empty by default. No Metal
+    /// counterpart.
+    pub vouched_driver_facts: BTreeSet<metal2vulkan::device::DriverFact>,
 }
 
 /// One setting of an instance layer (`VkLayerSettingEXT`).
@@ -1225,6 +1231,7 @@ pub(crate) fn identity_as_options(
     options: &DeviceOptions,
 ) -> DeviceDescription {
     description.assumed_unmeasured = options.assume_unmeasured_identity;
+    description.vouched_facts = options.vouched_driver_facts.clone();
     description
 }
 
@@ -1582,6 +1589,7 @@ fn same_options(a: &DeviceOptions, b: &DeviceOptions) -> bool {
         metal_level,
         record_executions,
         assume_unmeasured_identity,
+        vouched_driver_facts,
     } = a;
     *policy == b.policy
         && *layers == b.layers
@@ -1603,6 +1611,7 @@ fn same_options(a: &DeviceOptions, b: &DeviceOptions) -> bool {
         && *metal_level == b.metal_level
         && *record_executions == b.record_executions
         && *assume_unmeasured_identity == b.assume_unmeasured_identity
+        && *vouched_driver_facts == b.vouched_driver_facts
 }
 
 /// The group of `made` for `options`: the live one, or a new one on a new instance. Its index.

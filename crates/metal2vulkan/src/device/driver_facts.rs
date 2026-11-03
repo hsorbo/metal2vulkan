@@ -3047,8 +3047,10 @@ impl DeviceDescription {
     /// module docs' rule): on a measured identity ([`DeviceDescription::measured_identity`]) those
     /// its driver's rows name at its release, on its vendor and GPU; on any other identity only the
     /// defects its driver is measured with on any release or GPU
-    /// ([`DriverFact::assumed_where_unmeasured`]). The runtime relies on an answer fact only where
-    /// the driver has it, and elsewhere takes the exact path that needs none.
+    /// ([`DriverFact::assumed_where_unmeasured`]), and the answers measured of its driver
+    /// elsewhere that the consumer vouches for ([`DeviceDescription::vouched_facts`]). The runtime
+    /// relies on an answer fact only where the driver has it, and elsewhere takes the exact path
+    /// that needs none.
     pub fn driver_facts(&self) -> BTreeSet<DriverFact> {
         // A measured identity is no GPU a named release puts out (`NAMED_RELEASES`).
         let measured = self.measured_identity();
@@ -3072,7 +3074,9 @@ impl DeviceDescription {
                         && row.vendor.is_none_or(|v| v == self.vendor_id)
                         && row.device.is_none_or(|d| Some(d) == gpu)
                 }
-                false => row.fact.assumed_where_unmeasured(),
+                false => {
+                    row.fact.assumed_where_unmeasured() || self.vouched_facts.contains(&row.fact)
+                }
             })
             .map(|row| row.fact)
             .collect()
@@ -3142,6 +3146,7 @@ impl DeviceDescription {
             .iter()
             .filter(|row| Some(row.driver) == self.driver_id)
             .filter(|row| !row.fact.assumed_where_unmeasured())
+            .filter(|row| !self.vouched_facts.contains(&row.fact))
             .map(|row| row.fact)
             .collect()
     }

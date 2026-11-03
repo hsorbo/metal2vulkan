@@ -94,7 +94,9 @@ pub(crate) fn unmeasured_driver(properties: &super::DeviceProperties) -> Option<
     let withheld: Vec<String> = (properties.driver_facts_withheld.iter())
         .map(|fact| format!("{fact:?}"))
         .collect();
+    let vouched = &description.vouched_facts;
     let assumed: Vec<String> = (properties.driver_facts.iter())
+        .filter(|fact| !vouched.contains(fact))
         .map(|fact| format!("{fact:?}"))
         .chain(properties.driver_defects.iter().map(|d| format!("{d:?}")))
         .collect();
@@ -105,11 +107,23 @@ pub(crate) fn unmeasured_driver(properties: &super::DeviceProperties) -> Option<
         true => "none".to_owned(),
         false => names.join(", "),
     };
+    // The answers its consumer vouches for (`DeviceOptions::vouched_driver_facts`), taken
+    let taken: Vec<String> = (properties.driver_facts.iter())
+        .filter(|fact| vouched.contains(fact))
+        .map(|fact| format!("{fact:?}"))
+        .collect();
+    let vouched_clause = match taken.is_empty() {
+        true => String::new(),
+        false => format!(
+            ", takes the answers its consumer vouches for ({})",
+            taken.join(", ")
+        ),
+    };
     Some(format!(
         "metal2vulkan: the device's driver {:?} at driverVersion {:#x} on deviceID {:#x} is an \
          identity not measured: the runtime takes the exact path in place of the driver's answers \
-         measured elsewhere ({}) and works around its defects measured elsewhere ({}); every \
-         answer is Metal's [{UNMEASURED_DRIVER}]",
+         measured elsewhere ({}){vouched_clause} and works around its defects measured elsewhere \
+         ({}); every answer is Metal's [{UNMEASURED_DRIVER}]",
         description.driver_id,
         description.driver_version,
         description.device_id,

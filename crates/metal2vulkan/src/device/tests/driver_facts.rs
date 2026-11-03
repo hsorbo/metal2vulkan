@@ -837,6 +837,42 @@ fn the_committed_profiles_drivers_have_their_facts() {
     assert_eq!(claims, expected);
 }
 
+/// An unmeasured identity takes the answers measured of its driver elsewhere that its consumer
+/// vouches for (`DeviceDescription::vouched_facts`), and withholds them no more; an answer no row
+/// measures of its driver, vouched for, is ignored; a measured identity's facts are its rows'
+/// alone. The RPL-S at ANV 26.2.5 vouched to merge submissions that signal nothing merges them,
+/// beside ANV's hidden aliased writes; vouched one of MoltenVK's answers, it takes none.
+#[test]
+fn an_unmeasured_identity_takes_the_answers_vouched_for() {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../metal2vulkan-validation/profiles");
+    let read = |stem: &str| {
+        let text = std::fs::read_to_string(dir.join(format!("{stem}.json"))).expect(stem);
+        DeviceDescription::from_khronos_json(&text, None).expect("profile parses")
+    };
+    const MERGE: DriverFact = DriverFact::SubmissionsWithoutSignalsMerge;
+    let mut desc = read("intel-uhd770-rpls-anv");
+    desc.driver_version += 1;
+    assert!(!desc.measured_identity());
+    assert!(desc.driver_facts_withheld().contains(&MERGE));
+    desc.vouched_facts.insert(MERGE);
+    assert_eq!(desc.driver_facts(), [HIDE, MERGE].into());
+    assert!(!desc.driver_facts_withheld().contains(&MERGE));
+
+    let withheld = desc.driver_facts_withheld();
+    let foreign = read("moltenvk-m4")
+        .driver_facts()
+        .into_iter()
+        .find(|fact| !fact.assumed_where_unmeasured() && !withheld.contains(fact) && *fact != MERGE)
+        .expect("an answer of MoltenVK's that ANV is measured without");
+    desc.vouched_facts.insert(foreign);
+    assert_eq!(desc.driver_facts(), [HIDE, MERGE].into());
+
+    let mut measured = read("intel-uhd770-rpls-anv");
+    let facts = measured.driver_facts();
+    measured.vouched_facts.insert(foreign);
+    assert_eq!(measured.driver_facts(), facts);
+}
+
 /// A release or GPU not measured is an unmeasured identity: it takes none of its driver's answer
 /// facts, and its driver's defects stand at every release and on every GPU of the driver. The M4
 /// at MoltenVK 1.4.2, or at 1.4.0, or another Apple GPU at 1.4.1, takes MoltenVK's defects alone

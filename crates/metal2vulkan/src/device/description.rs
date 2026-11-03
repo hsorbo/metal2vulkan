@@ -95,6 +95,14 @@ pub struct DeviceDescription {
     /// counterpart.
     #[cfg_attr(feature = "serde", serde(default))]
     pub assumed_unmeasured: bool,
+    /// Answer facts of the device's driver that the consumer measured on this device and vouches
+    /// for, where its identity is not measured ([`DeviceDescription::measured_identity`]): each
+    /// one the driver is measured to give on another GPU or release (a row of
+    /// [`DeviceDescription::driver_facts_withheld`]) is taken as if measured here, the rest are
+    /// ignored. Empty by default; the runtime's `DeviceOptions::vouched_driver_facts`. No Metal
+    /// counterpart.
+    #[cfg_attr(feature = "serde", serde(skip))]
+    pub vouched_facts: BTreeSet<crate::device::DriverFact>,
 }
 
 /// A device's allocation sizes, [`DeviceDescription::allocation`]: device facts that size
@@ -200,6 +208,7 @@ impl DeviceDescription {
             generated_commands: None,
             allocation: AllocationLimits::default(),
             assumed_unmeasured: false,
+            vouched_facts: BTreeSet::new(),
         }
     }
 
